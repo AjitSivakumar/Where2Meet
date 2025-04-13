@@ -1,24 +1,39 @@
-import logo from './logo.svg';
-import './App.css';
+// src/App.jsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
+import CreateEventPage from './pages/CreateEventPage';
+import JoinEventPage from './pages/JoinEventPage';
+import FinalOutputPage from './pages/FinalOutputPage';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        {/* 
+          Landing page: accessible via '/'
+        */}
+        <Route path="/" element={<LandingPage />} />
+
+        {/* 
+          Create Event page: accessible via '/create'
+          This is for the group leader to create a new event
+        */}
+        <Route path="/create" element={<CreateEventPage />} />
+
+        {/* 
+          Join Event page: accessible via '/join/:eventId'
+          This is for participants to join a specific event 
+          (the eventId might come in handy if you eventually set up a backend)
+        */}
+        <Route path="/join/:eventId" element={<JoinEventPage />} />
+
+        {/* 
+          Final output page: shows top 10 meeting locations
+        */}
+        <Route path="/final" element={<FinalOutputPage />} />
+      </Routes>
+    </Router>
   );
 }
 
