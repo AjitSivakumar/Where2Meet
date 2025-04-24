@@ -1,19 +1,24 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import "../styles.css"
 
-function JoinEventPage() {
+export default function JoinEventPage() {
   const { eventId } = useParams()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const navigate = useNavigate()
 
-  const handleSubmit = () => {
-    // TODO: send name & description to backend for vectorization…
+  const handleSubmit = async () => {
+    // 1) Send the user's description (and name, if you like) to Flask
+    await fetch("/set_description", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description })
+    })
 
-    // navigate to waiting page instead of final
+    // 2) Then send them into the waiting room
     navigate(`/waiting/${eventId}`)
   }
 
@@ -74,7 +79,7 @@ function JoinEventPage() {
             <button
               className="button primary-button"
               onClick={handleSubmit}
-              disabled={!name.trim()}
+              disabled={!description.trim()}
             >
               Submit
               <svg
@@ -93,10 +98,8 @@ function JoinEventPage() {
           </div>
         </div>
 
-        {/* … info-section & back-link … */}
+        {/* …info-section & back-link remain unchanged… */}
       </div>
     </div>
   )
 }
-
-export default JoinEventPage

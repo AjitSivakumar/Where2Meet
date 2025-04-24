@@ -1,22 +1,25 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import "../styles.css" // We'll create this CSS file
+import "../styles.css"
 
 export default function LandingPage() {
   const [eventId, setEventId] = useState("")
   const navigate = useNavigate()
+
+  // Clear any prior state on the backend
+  useEffect(() => {
+    fetch("/reset", { method: "POST" })
+  }, [])
 
   const handleCreateEvent = () => {
     navigate("/create")
   }
 
   const handleJoinEvent = () => {
-    // in final, we will validate the eventId with the backend
-    if (eventId.trim()) {
-      navigate(`/join/${eventId}`)
-    }
+    if (!eventId.trim()) return
+    navigate(`/join/${eventId}`)
   }
 
   return (
@@ -26,8 +29,8 @@ export default function LandingPage() {
         <div className="hero">
           <div className="icon-circle">
             <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-              <circle cx="12" cy="10" r="3"></circle>
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
             </svg>
           </div>
           <h1 className="title">we are <span className="highlight">where2meet!</span></h1>
@@ -51,10 +54,10 @@ export default function LandingPage() {
               <div className="feature-item">
                 <div className="icon-circle small">
                   <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                   </svg>
                 </div>
                 <div>
@@ -67,8 +70,8 @@ export default function LandingPage() {
               <button className="button primary-button full-width" onClick={handleCreateEvent}>
                 same button as above
                 <svg className="icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                  <polyline points="12 5 19 12 12 19"></polyline>
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
                 </svg>
               </button>
             </div>
@@ -94,15 +97,15 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="card-footer">
-              <button 
-                className="button primary-button full-width" 
+              <button
+                className="button primary-button full-width"
                 onClick={handleJoinEvent}
                 disabled={!eventId.trim()}
               >
                 join
                 <svg className="icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                  <polyline points="12 5 19 12 12 19"></polyline>
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
                 </svg>
               </button>
             </div>
