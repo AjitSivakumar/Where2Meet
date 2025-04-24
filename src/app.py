@@ -1,46 +1,65 @@
 from midpoint_finder import calculate_midpoint, find_nearby
-from wordvectorization import rank_groups
-import argparse
-import requests
+#from wordvectorization import rank_groups
+from flask import Flask, request, jsonify
 
-def getNearby(arr=None):
-    if(arr is None):
-        arr = [(37.7749, -122.4194), (34.0522, -118.2437), (40.7128, -74.0060)]
+app = Flask(__name__)
+
+# Global state (this could be refactored into a better storage solution later)
+locations = []
+description_input = ""
+
+@app.route('/set_description', methods=['POST'])
+def set_description():
+    global description_input
+    data = request.get_json()
+    description_input = data.get("description", "")
+    return jsonify({"message": "Description set successfully", "description": description_input})
+
+@app.route('/add_location', methods=['POST'])
+def add_location():
+    global locations
+    data = request.get_json()
+    lat = data.get("lat")
+    lon = data.get("lon")
+
+    if lat is None or lon is None:
+        return jsonify({"error": "lat and lon must be provided"}), 400
+
+    locations.append((float(lat), float(lon)))
+    optimal_location = getNearby(locations)
+    return jsonify({"locations": locations, "optimal_location": optimal_location})
+
+@app.route('/reset', methods=['POST'])
+def reset():
+    global locations, description_input
+    locations = []
+    description_input = ""
+    return jsonify({"message": "State reset successfully"})
+
+def getNearby(arr):
     midpoint = calculate_midpoint(arr)
-    s = find_nearby(midpoint[0], midpoint[1])
-    for i in s:
-        print("hi")
-        print(f" - {i['name']} at ({i['lat']:.6f}, {i['lon']:.6f})")
-    print(f"Midpoint: ({midpoint[0]:.6f}, {midpoint[1]:.6f})")
-    return s
+    suggestions = find_nearby(midpoint[0], midpoint[1])
 
-def wordVectorization(input_text=None, groups=None):
-    if input_text is None:
-        input_text = "Group meeting with friends after a long time."
-    
-    if groups is None:
-        groups = []
-        groups.append(["Coffee shop great for catching up with friends.", "I love meeting friends at cafes."])
-        groups.append(["Had a great time with family at the park.", "Family gatherings are always fun."])
-        groups.append(["Work meeting was productive and engaging.", "Team meetings can be very effective."])
-        groups.append(["Had a wonderful time with friends at the beach.", "Beach outings are the best with friends."])
-        groups.append(["Enjoyed a lovely dinner with family.", "Family dinners are always special."])
-        groups.append(["Caught up with old friends over lunch.", "Lunch with friends is always enjoyable."])
-        groups.append(["Had a fun day out with colleagues.", "Colleagues make work more enjoyable."])
-        groups.append(["I can't believe how much I struggled with this.", "Learning AI takes time."])
-        groups.append(["Exploring new places is always exciting.", "Traveling opens up new perspectives."])
-        groups.append(["Reading books can be a great escape.", "Books transport you to different worlds."])
-    
+    # Simplify and remove duplicates
+    unique_suggestions = list({place['name']: {
+        'lat': place['lat'],
+        'lon': place['lon'],
+        'name': place['name']
+    } for place in suggestions}.values())
 
-    ranked_groups = rank_groups(input_text, groups)
-    top_10_groups = ranked_groups[:10]
-    count = 0
-    for rank, (group, score) in enumerate(ranked_groups, start=1):
-        print(f"Rank {rank}: Score {score:.2f}, Texts: {group}")
-        count += 1
-        if count == 10:
-            break
-    return top_10_groups
+    return {
+        "midpoint": {"lat": midpoint[0], "lon": midpoint[1]},
+        "suggestions": unique_suggestions
+    }
 
+# def wordVectorization(input_text=None, groups=None):
+#     if input_text is None:
+#         input_text = description_input
+#     if groups is None:
+#         groups = groups_data
 
-getNearby([(37.7749, -122.4194), (34.0522, -118.2437), (40.7128, -74.0060)])
+#     ranked_groups = rank_groups(input_text, groups)
+#     return ranked_groups[:10]
+
+if __name__ == '__main__':
+    app.run(debug=True)
