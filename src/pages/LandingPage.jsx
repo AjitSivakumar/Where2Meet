@@ -1,38 +1,119 @@
+"use client"
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import "../styles.css" // We'll create this CSS file
 
-function LandingPage() {
-  const [eventId, setEventId] = useState('');
-  const navigate = useNavigate();
+export default function LandingPage() {
+  const [eventId, setEventId] = useState("")
+  const navigate = useNavigate()
 
   const handleCreateEvent = () => {
-    navigate('/create');
-  };
+    navigate("/create")
+  }
 
   const handleJoinEvent = () => {
     // in final, we will validate the eventId with the backend
-    navigate(`/join/${eventId}`);
-  };
+    if (eventId.trim()) {
+      navigate(`/join/${eventId}`)
+    }
+  }
 
   return (
-    <div style={{ textAlign: 'center', marginTop: '50px' }}>
-      <h1>Welcome to where2meet!</h1>
-      <p>Find the best place for your group to meet, easily.</p>
-      <button onClick={handleCreateEvent}>Create an Event</button>
+    <div className="landing-page">
+      <div className="container">
+        {/* Hero section */}
+        <div className="hero">
+          <div className="icon-circle">
+            <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+          </div>
+          <h1 className="title">we are <span className="highlight">where2meet!</span></h1>
+          <p className="subtitle">
+            find the perfect meeting spot for your group, effortlessly coordinate locations, and make decisions together.
+          </p>
+          <button className="button primary-button" onClick={handleCreateEvent}>
+            create an event
+          </button>
+        </div>
 
-      <div style={{ marginTop: '20px' }}>
-        <input
-          type="text"
-          placeholder="Enter Event ID"
-          value={eventId}
-          onChange={(e) => setEventId(e.target.value)}
-          style={{ marginRight: '10px' }}
-        />
-        <button onClick={handleJoinEvent}>Join an Event</button>
+        {/* Cards section */}
+        <div className="cards-grid">
+          {/* Create Event Card */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">create a new event</h2>
+              <p className="card-description">press the button lmao</p>
+            </div>
+            <div className="card-content">
+              <div className="feature-item">
+                <div className="icon-circle small">
+                  <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="feature-title">invite your group!</h3>
+                  <p className="feature-description">share this link with everyone</p>
+                </div>
+              </div>
+            </div>
+            <div className="card-footer">
+              <button className="button primary-button full-width" onClick={handleCreateEvent}>
+                same button as above
+                <svg className="icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Join Event Card */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">join an event</h2>
+              <p className="card-description">enter the event ID to join</p>
+            </div>
+            <div className="card-content">
+              <div className="form-group">
+                <label htmlFor="event-id" className="form-label">event ID</label>
+                <input
+                  id="event-id"
+                  className="input"
+                  type="text"
+                  placeholder="enter event ID"
+                  value={eventId}
+                  onChange={(e) => setEventId(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="card-footer">
+              <button 
+                className="button primary-button full-width" 
+                onClick={handleJoinEvent}
+                disabled={!eventId.trim()}
+              >
+                join
+                <svg className="icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="footer">
+          <p>where2meet helps you find the optimal meeting location based on everyone's starting points.</p>
+        </div>
       </div>
     </div>
-  );
+  )
 }
-
-export default LandingPage;
