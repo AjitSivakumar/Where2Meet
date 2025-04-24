@@ -34,7 +34,7 @@ function CreateEventPage() {
 
   const handleCreate = () => {
     const generatedEventId = "12345" // mock
-    navigate(`/join/${generatedEventId}`)
+    navigate(`/waiting/${generatedEventId}`);
   }
 
   return (

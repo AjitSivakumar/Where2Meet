@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage';
 import CreateEventPage from './pages/CreateEventPage';
 import JoinEventPage from './pages/JoinEventPage';
 import FinalOutputPage from './pages/FinalOutputPage';
+import WaitingPage from './pages/WaitingPage';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 
 function App() {
@@ -31,7 +32,15 @@ function App() {
           (the eventId might come in handy if you eventually set up a backend)
         */}
         <Route path="/join/:eventId" element={<JoinEventPage />} />
-
+        {
+          /* 
+            Waiting page: accessible via '/waiting/:eventId'
+            This is for the group leader to see who has joined the event
+          */}
+          <Route path="/waiting/:eventId" element={<WaitingPage />} />
+        {/* 
+          Map page: shows a map with a marker at the center
+        */}
         {/* 
           Final output page: shows top 10 meeting locations
         */}
