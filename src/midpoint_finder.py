@@ -41,20 +41,42 @@ def calculate_midpoint(coords):
     hyp = math.hypot(x, y)
     return math.degrees(math.atan2(z, hyp)), math.degrees(math.atan2(y, x))
 
-def find_nearby(lat, lon, radius=1500, amenity='restaurant'):
-    """Query Overpass API for nearby amenities within radius (meters)."""
+def find_nearby(lat, lon, radius=1500, amenity=None):
+    """Query Overpass API for nearby amenities or anything within radius (meters)."""
     overpass_url = "https://overpass-api.de/api/interpreter"
-    query = f"""
-    [out:json][timeout:25];
-    node(around:{radius},{lat},{lon})["amenity"="{amenity}"];
-    out;
-    """
+
+    if amenity:
+        # Search for specific amenity using node, way, and relation
+        query = f"""
+        [out:json][timeout:25];
+        (
+          node(around:{radius},{lat},{lon})["amenity"="{amenity}"];
+          way(around:{radius},{lat},{lon})["amenity"="{amenity}"];
+          relation(around:{radius},{lat},{lon})["amenity"="{amenity}"];
+        );
+        out center;
+        """
+    else:
+        # No amenity filter — return everything
+        query = f"""
+        [out:json][timeout:25];
+        (
+          node(around:{radius},{lat},{lon});
+          way(around:{radius},{lat},{lon});
+          relation(around:{radius},{lat},{lon});
+        );
+        out center;
+        """
+
     response = requests.post(overpass_url, data=query)
     data = response.json()
     results = []
     for el in data.get('elements', []):
-        name = el.get('tags', {}).get('name', 'Unnamed')
-        results.append({'id': el['id'], 'name': name, 'lat': el['lat'], 'lon': el['lon']})
+        name = el.get('tags', {}).get('name')
+        if not name:
+            continue  # Skip unnamed stuff
+        center = el.get('center', el)
+        results.append({'id': el['id'], 'name': name, 'lat': center['lat'], 'lon': center['lon']})
     return results
 
 def main():
@@ -63,7 +85,7 @@ def main():
                         help="List of addresses (wrap each in quotes)")
     parser.add_argument('--radius', type=int, default=1500,
                         help="Search radius in meters (default: 1500)")
-    parser.add_argument('--amenity', default='restaurant',
+    parser.add_argument('--amenity', default=None,
                         help="OSM amenity type to search for (default: restaurant)")
     args = parser.parse_args()
 
@@ -82,11 +104,16 @@ def main():
     mid_lat, mid_lon = calculate_midpoint(coords)
     print(f"Midpoint: ({mid_lat:.6f}, {mid_lon:.6f})")
 
-    print(f"\nSearching for nearby '{args.amenity}' within {args.radius} meters...")
+    if args.amenity:
+        print(f"\nSearching for nearby '{args.amenity}' within {args.radius} meters...")
+    else:
+        print(f"\nSearching for any mapped locations within {args.radius} meters...")
     pois = find_nearby(mid_lat, mid_lon, args.radius, args.amenity)
     print(f"Found {len(pois)} results:\n")
-    for poi in pois:
+    for i, poi in enumerate(pois):
         print(f" - {poi['name']} at ({poi['lat']:.6f}, {poi['lon']:.6f})")
-
+        if i == 19:  # Pause after 20 results (0-indexed)
+            input("\n⏸️ Paused after 20 results. Press Enter to continue...\n")
+        
 if __name__ == '__main__':
     main()
