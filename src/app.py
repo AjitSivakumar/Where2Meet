@@ -2,6 +2,11 @@ from midpoint_finder import calculate_midpoint, find_nearby
 from wordvectorization import rank_groups
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from locations import getLocationsDescriptions
+from wordvectorization import best_match
+from wordvectorization import top_matches
+
+
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -63,20 +68,33 @@ def vectorize():
     ]
     return jsonify({"input": text, "ranked_groups": result})
 
+
 def getNearby(arr):
     midpoint = calculate_midpoint(arr)
-    suggestions = find_nearby(midpoint[0], midpoint[1])
+    location_map = getLocationsDescriptions(midpoint)  # {(lat, lon, name): description}
 
-    # Simplify and remove duplicates
-    unique_suggestions = list({place['name']: {
-        'lat': place['lat'],
-        'lon': place['lon'],
-        'name': place['name']
-    } for place in suggestions}.values())
+    if not location_map:
+        return {
+            "midpoint": {"lat": midpoint[0], "lon": midpoint[1]},
+            "suggestions": []
+        }
+
+    location_keys = list(location_map.keys())
+    location_descriptions = list(location_map.values())
+
+    top_results = top_matches(description_input, location_descriptions, top_n=10)
+
+    suggestions = [{
+        "lat": location_keys[idx][0],
+        "lon": location_keys[idx][1],
+        "name": location_keys[idx][2],
+        "match_description": location_descriptions[idx],
+        "score": float(score)
+    } for idx, score in top_results]
 
     return {
         "midpoint": {"lat": midpoint[0], "lon": midpoint[1]},
-        "suggestions": unique_suggestions[:10]  # Limit to 10 suggestions
+        "suggestions": suggestions
     }
 
 if __name__ == '__main__':

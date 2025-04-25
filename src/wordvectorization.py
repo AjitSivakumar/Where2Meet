@@ -3,7 +3,9 @@
 # compares the similarity of a given text with groups of texts and ranks them based on similarity scores
 
 from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 model = SentenceTransformer('all-MiniLM-L6-v2')
+
 
 # Input text and groups of texts
 
@@ -34,6 +36,48 @@ def rank_groups(input_text, groups):
     )
 
     return ranked_groups
+
+def best_match(input_text, descriptions):
+    """
+    Return the index of the most similar description.
+    
+    Parameters:
+    - input_text: str, user's description
+    - descriptions: list of str, location descriptions to compare
+
+    Returns:
+    - index (int): the index of the best matching description
+    """
+    if not descriptions:
+        return None
+    input_embedding = model.encode(input_text)
+    desc_embeddings = model.encode(descriptions)
+    similarities = cosine_similarity([input_embedding], desc_embeddings)[0]
+    return similarities.argmax()
+
+def top_matches(input_text, descriptions, top_n=10):
+    """
+    Return the indices and scores of the top N most similar descriptions.
+    
+    Parameters:
+    - input_text: str
+    - descriptions: list of str
+    - top_n: int
+
+    Returns:
+    - List of tuples (index, similarity_score)
+    """
+    if not descriptions:
+        return []
+
+    input_embedding = model.encode(input_text)
+    desc_embeddings = model.encode(descriptions)
+    similarities = cosine_similarity([input_embedding], desc_embeddings)[0]
+
+    # Get top N indices
+    top_indices = similarities.argsort()[-top_n:][::-1]
+    return [(idx, similarities[idx]) for idx in top_indices]
+
 
 
 def main(input_text=None, groups=None):
