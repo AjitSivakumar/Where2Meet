@@ -1,31 +1,47 @@
-# very simple example of word vectorization using sentence transformers
-# pip install sentence-transformers
-# compares the similarity of a given text with groups of texts and ranks them based on similarity scores
-
-from sentence_transformers import SentenceTransformer
+from transformers import AutoTokenizer, AutoModel
+import torch
 from sklearn.metrics.pairwise import cosine_similarity
-model = SentenceTransformer('all-MiniLM-L6-v2')
+import numpy as np
 
+# Load your custom or novel BERT model
+MODEL_NAME = 'bert-base-uncased'  # Change this to any other BERT variant
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+model = AutoModel.from_pretrained(MODEL_NAME)
 
-# Input text and groups of texts
+def get_embedding(text, max_length=128, pooling='mean'):
+    """
+    Convert text to embedding using a custom BERT model.
+
+    Parameters:
+    - text: str
+    - max_length: int, tokenizer max length
+    - pooling: 'mean' or 'cls', pooling strategy
+
+    Returns:
+    - numpy array of embedding
+    """
+    inputs = tokenizer(text, return_tensors='pt', truncation=True, padding=True, max_length=max_length)
+    with torch.no_grad():
+        outputs = model(**inputs)
+
+    if pooling == 'cls':
+        return outputs.last_hidden_state[:, 0, :].squeeze().numpy()
+    elif pooling == 'mean':
+        attention_mask = inputs['attention_mask']
+        embeddings = outputs.last_hidden_state
+        mask = attention_mask.unsqueeze(-1).expand(embeddings.size()).float()
+        masked_embeddings = embeddings * mask
+        summed = masked_embeddings.sum(1)
+        summed_mask = mask.sum(1)
+        mean_pooled = summed / torch.clamp(summed_mask, min=1e-9)
+        return mean_pooled.squeeze().numpy()
+    else:
+        raise ValueError("Invalid pooling type. Choose 'mean' or 'cls'.")
 
 def rank_groups(input_text, groups):
-    """
-    Rank groups of texts based on their similarity to the input text.
-    
-    Parameters:
-    - input_text: str, the text to compare against
-    - groups: list of lists, each containing texts to compare
-    
-    Returns:
-    - ranked_groups: list of tuples (group, score), sorted by score
-    """
-    # Encode the input text and the groups of texts
-    input_embedding = model.encode(input_text)
-    group_embeddings = [[model.encode(text) for text in group] for group in groups]
+    input_embedding = get_embedding(input_text)
+    group_embeddings = [[get_embedding(text) for text in group] for group in groups]
 
-    from sklearn.metrics.pairwise import cosine_similarity
-    # Compute average similarity per group
     group_scores = [
         sum(cosine_similarity([input_embedding], group)[0]) / len(group)
         for group in group_embeddings
@@ -34,54 +50,27 @@ def rank_groups(input_text, groups):
     ranked_groups = sorted(
         zip(groups, group_scores), key=lambda x: x[1], reverse=True
     )
-
     return ranked_groups
 
 def best_match(input_text, descriptions):
-    """
-    Return the index of the most similar description.
-    
-    Parameters:
-    - input_text: str, user's description
-    - descriptions: list of str, location descriptions to compare
-
-    Returns:
-    - index (int): the index of the best matching description
-    """
     if not descriptions:
         return None
-    input_embedding = model.encode(input_text)
-    desc_embeddings = model.encode(descriptions)
+    input_embedding = get_embedding(input_text)
+    desc_embeddings = np.array([get_embedding(text) for text in descriptions])
     similarities = cosine_similarity([input_embedding], desc_embeddings)[0]
     return similarities.argmax()
 
 def top_matches(input_text, descriptions, top_n=10):
-    """
-    Return the indices and scores of the top N most similar descriptions.
-    
-    Parameters:
-    - input_text: str
-    - descriptions: list of str
-    - top_n: int
-
-    Returns:
-    - List of tuples (index, similarity_score)
-    """
     if not descriptions:
         return []
 
-    input_embedding = model.encode(input_text)
-    desc_embeddings = model.encode(descriptions)
+    input_embedding = get_embedding(input_text)
+    desc_embeddings = np.array([get_embedding(text) for text in descriptions])
     similarities = cosine_similarity([input_embedding], desc_embeddings)[0]
-
-    # Get top N indices
     top_indices = similarities.argsort()[-top_n:][::-1]
     return [(idx, similarities[idx]) for idx in top_indices]
 
-
-
 def main(input_text=None, groups=None):
-    # set defaults if not provided
     if input_text is None:
         input_text = "Group meeting with friends after a long time."
     if groups is None:
@@ -96,7 +85,7 @@ def main(input_text=None, groups=None):
             ["I can't believe how much I struggled with this.", "Learning AI takes time."]
         ]
 
-    print("Word Vectorization Example")
+    print("Custom BERT Vectorization Example")
     print("Comparing input text with groups of texts...")
 
     ranked_groups = rank_groups(input_text, groups)
@@ -106,7 +95,6 @@ def main(input_text=None, groups=None):
         print(f"Rank {rank}: Score {score:.2f}, Texts: {group}")
 
     return top_10_groups
-
 
 if __name__ == "__main__":
     main()
