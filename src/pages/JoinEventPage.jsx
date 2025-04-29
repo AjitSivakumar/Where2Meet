@@ -1,104 +1,121 @@
+// JoinEventPage.jsx
 "use client"
 
 import React, { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { MapContainer, TileLayer, Marker, useMapEvent } from "react-leaflet"
+import "leaflet/dist/leaflet.css"
+import L from "leaflet"
 import "../styles.css"
+
+const API_URL = "http://localhost:5000"
+
+// fix Leaflet default icons
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png"),
+  iconUrl:      require("leaflet/dist/images/marker-icon.png"),
+  shadowUrl:    require("leaflet/dist/images/marker-shadow.png"),
+})
 
 export default function JoinEventPage() {
   const { eventId } = useParams()
   const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
+  const [markerPos, setMarkerPos] = useState(null)
   const navigate = useNavigate()
+  const center = { lat: 40.7128, lng: -74.0060 }
+
+  function ClickHandler() {
+    useMapEvent("click", e => {
+      setMarkerPos({ lat: e.latlng.lat, lng: e.latlng.lng })
+    })
+    return null
+  }
 
   const handleSubmit = async () => {
-    // 1) Send the user's description (and name, if you like) to Flask
-    await fetch("/set_description", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description })
-    })
+    if (!name.trim() || !markerPos) return
 
-    // 2) Then send them into the waiting room
-    navigate(`/waiting/${eventId}`)
+    try {
+      const res = await fetch(`${API_URL}/add_location`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_id: eventId,
+          name:     name.trim(),
+          lat:      markerPos.lat,
+          lon:      markerPos.lng
+        })
+      })
+      if (!res.ok) throw new Error(`Status ${res.status}`)
+      navigate(`/waiting/${eventId}`)
+    } catch (err) {
+      console.error("Join failed:", err)
+      alert("Could not join—ensure the backend is running and the Event ID is correct.")
+    }
   }
 
   return (
     <div className="join-event-page">
       <div className="container">
         <div className="page-header">
-          <div className="icon-circle">
-            {/* …icon SVG… */}
-          </div>
+          <div className="icon-circle">{/* …icon SVG… */}</div>
           <h1 className="title">Join Event</h1>
           <div className="event-id-badge">
             <span className="event-id-label">Event ID:</span>
             <span className="event-id-value">{eventId}</span>
           </div>
-          <p className="subtitle">Enter your details to join this meetup</p>
+          <p className="subtitle">
+            Enter your name and click the map to set your location
+          </p>
         </div>
 
         <div className="card join-event-card">
-          <div className="card-header">
-            <h2 className="card-title">Your Information</h2>
-            <p className="card-description">
-              Tell us a bit about yourself to help find the best meeting spot
-            </p>
-          </div>
           <div className="card-content">
             <div className="form-group">
-              <label htmlFor="your-name" className="form-label">
-                Your Name
-              </label>
+              <label htmlFor="your-name" className="form-label">Your Name</label>
               <input
                 id="your-name"
                 className="input"
                 type="text"
                 placeholder="Enter your name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={e => setName(e.target.value)}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="your-description" className="form-label">
-                Short Description
-                <span className="helper-text">
-                  Tell us about your preferences or any special requirements
-                </span>
+              <label className="form-label">Your Location
+                <span className="helper-text">Click the map below</span>
               </label>
-              <textarea
-                id="your-description"
-                className="textarea"
-                placeholder="E.g., I prefer locations with parking…"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
+              <div className="map-container">
+                <MapContainer center={center} zoom={10} className="map">
+                  <TileLayer
+                    attribution="&copy; OpenStreetMap"
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <ClickHandler />
+                  {markerPos && (
+                    <Marker position={[markerPos.lat, markerPos.lng]} />
+                  )}
+                </MapContainer>
+              </div>
+              {markerPos && (
+                <div className="location-info">
+                  selected: {markerPos.lat.toFixed(4)}, {markerPos.lng.toFixed(4)}
+                </div>
+              )}
             </div>
           </div>
           <div className="card-footer">
             <button
               className="button primary-button"
               onClick={handleSubmit}
-              disabled={!description.trim()}
+              disabled={!name.trim() || !markerPos}
             >
               Submit
-              <svg
-                className="icon-right"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
             </button>
           </div>
         </div>
-
-        {/* …info-section & back-link remain unchanged… */}
       </div>
     </div>
   )

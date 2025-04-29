@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import "../styles.css"
 
+const API_URL = "http://localhost:5000"
+
 export default function LandingPage() {
   const [eventId, setEventId] = useState("")
   const navigate = useNavigate()

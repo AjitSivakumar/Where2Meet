@@ -5,7 +5,9 @@ import { useNavigate } from "react-router-dom"
 import { MapContainer, TileLayer, Marker, useMapEvent } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
-import "../styles.css"  
+import "../styles.css"
+
+const API_URL = "http://localhost:5000"
 
 // ───── Fix Leaflet's default icon paths ─────
 delete L.Icon.Default.prototype._getIconUrl
@@ -15,55 +17,63 @@ L.Icon.Default.mergeOptions({
   shadowUrl:    require("leaflet/dist/images/marker-shadow.png"),
 })
 
+// generate a simple 6-char event ID
+function generateEventId() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase()
+}
+
 export default function CreateEventPage() {
   const [eventName, setEventName]             = useState("")
   const [eventDescription, setEventDescription] = useState("")
   const [markerPosition, setMarkerPosition]     = useState(null)
   const navigate = useNavigate()
+  const center = { lat: 40.7128, lng: -74.0060 }
 
-  const center = { lat: 40.7128, lng: -74.006 }
-
-  // Reset backend state on mount (relies on CRA proxy in package.json)
   useEffect(() => {
-    fetch("http://localhost:5000/reset", { method: "POST" })
-      .catch(err => console.error('Reset failed', err));
+    fetch(`${API_URL}/reset`, { method: "POST" }).catch(console.error)
   }, [])
 
-  const handleMapClick = (e) =>
-    setMarkerPosition({ lat: e.latlng.lat, lng: e.latlng.lng })
-
   function ClickHandler() {
-    useMapEvent("click", handleMapClick)
+    useMapEvent("click", e => {
+      setMarkerPosition({ lat: e.latlng.lat, lng: e.latlng.lng })
+    })
     return null
   }
 
   const handleCreate = async () => {
-    try {
-      // 1) send the description
-      await fetch("http://localhost:5000/set_description", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: eventDescription })
-      })
+    if (!eventDescription.trim() || !markerPosition) return
+    const newEventId = generateEventId()
 
-      // 2) send the leader’s location
-      const res = await fetch("http://localhost:5000/add_location", {
+    try {
+      // 1) POST description + name
+      let res = await fetch(`${API_URL}/set_description`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          event_id: newEventId,
+          name: eventName,
+          description: eventDescription
+        })
+      })
+      if (!res.ok) throw new Error(`desc status ${res.status}`)
+
+      // 2) POST leader’s map pin
+      res = await fetch(`${API_URL}/add_location`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_id: newEventId,
           lat: markerPosition.lat,
           lon: markerPosition.lng
         })
       })
-      if (!res.ok) throw new Error(`Add location failed: ${res.status}`)
-      const payload = await res.json()
+      if (!res.ok) throw new Error(`loc status ${res.status}`)
 
-      // 3) navigate to waiting room
-      const generatedEventId = "12345"
-      navigate(`/waiting/${generatedEventId}`, { state: { eventData: payload } })
-    } catch (error) {
-      console.error('Create event error', error)
-      alert('Unable to create event. Make sure your backend is running and proxy is set.')
+      // 3) navigate in
+      navigate(`/waiting/${newEventId}`)
+    } catch (err) {
+      console.error("Create event error:", err)
+      alert("Unable to create event. Check console & ensure backend is running.")
     }
   }
 
@@ -71,14 +81,7 @@ export default function CreateEventPage() {
     <div className="create-event-page">
       <div className="container">
         <div className="page-header">
-          <div className="icon-circle">
-            <svg className="icon" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          </div>
+          <div className="icon-circle">{/* …icon SVG… */}</div>
           <h1 className="title">create a new event</h1>
           <p className="subtitle">fill in a description and click your location</p>
         </div>
@@ -95,6 +98,7 @@ export default function CreateEventPage() {
                 onChange={e => setEventName(e.target.value)}
               />
             </div>
+
             <div className="form-group">
               <label htmlFor="event-description" className="form-label">description</label>
               <textarea
@@ -118,7 +122,9 @@ export default function CreateEventPage() {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
                   <ClickHandler />
-                  {markerPosition && <Marker position={[markerPosition.lat, markerPosition.lng]} />}
+                  {markerPosition && (
+                    <Marker position={[markerPosition.lat, markerPosition.lng]} />
+                  )}
                 </MapContainer>
               </div>
               {markerPosition && (
@@ -133,7 +139,7 @@ export default function CreateEventPage() {
             <button
               className="button primary-button"
               onClick={handleCreate}
-              disabled={!eventDescription || !markerPosition}
+              disabled={!eventDescription.trim() || !markerPosition}
             >
               create event
             </button>

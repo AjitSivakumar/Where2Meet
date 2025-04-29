@@ -1,80 +1,112 @@
+// WaitingPage.jsx
 "use client"
 
-import React from "react"
-import { useParams, useLocation, useNavigate } from "react-router-dom"
+import React, { useState, useEffect } from "react"
+import { useParams, useNavigate } from "react-router-dom"
 import "../styles.css"
+
+const API_URL = "http://localhost:5000"
 
 export default function WaitingPage() {
   const { eventId } = useParams()
-  const location = useLocation()
-  const navigate = useNavigate()
+  const navigate    = useNavigate()
+  const [data, setData]       = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(null)
 
-  // Grab the payload that your Create/Join pages sent:
-  const { eventData } = location.state || {}
-  if (!eventData) {
+  const fetchEvent = async () => {
+    try {
+      const res  = await fetch(`${API_URL}/get_event/${eventId}`)
+      if (!res.ok) throw new Error(`Status ${res.status}`)
+      const json = await res.json()
+      setData(json)
+
+      // If event is finalized, redirect immediately
+      if (json.finalized) {
+        navigate("/final", { state: { eventData: json, eventId } })
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchEvent()
+    const iv = setInterval(fetchEvent, 2000)  // poll faster (2s)
+    return () => clearInterval(iv)
+  }, [eventId])
+
+  if (loading) {
+    return <p style={{ textAlign:"center", padding:"2rem" }}>Loading…</p>
+  }
+  if (error) {
     return (
       <div className="waiting-page">
-        <p style={{ textAlign: "center", padding: "2rem" }}>
-          ⚠️ No event data available for ID <strong>{eventId}</strong>. Please go back and create or join an event.
+        <p style={{ textAlign:"center", padding:"2rem" }}>
+          ⚠️ Could not load event <strong>{eventId}</strong>: {error}
         </p>
       </div>
     )
   }
 
-  // Destructure what your Flask /add_location returned:
-  const { locations, optimal_location } = eventData
+  const { participants, locations, optimal_location } = data
   const { midpoint, suggestions } = optimal_location
 
-  const handleFinalize = () => {
-    // Pass along the same state into FinalOutputPage if needed
-    navigate("/final", { state: { eventData, eventId } })
+  const handleFinalize = async () => {
+    try {
+      await fetch(`${API_URL}/finalize/${eventId}`, { method: "POST" })
+      // immediately redirect the host
+      navigate("/final", { state: { eventData: data, eventId } })
+    } catch (err) {
+      console.error("Finalize failed:", err)
+      alert("Could not finalize—check your backend.")
+    }
   }
 
   return (
-    <div className="waiting-page" style={{ textAlign: "center", padding: "2rem" }}>
-      <h1>Event Created!</h1>
-      <p>Your Event ID is:</p>
-      <code style={{ fontSize: "1.2rem", padding: "0.5rem", background: "#f0f0f0" }}>
-        {eventId}
-      </code>
-      <p>Share this ID so others can join.</p>
+    <div className="waiting-page" style={{ textAlign:"center", padding:"2rem" }}>
+      <h1>Waiting Room</h1>
+      <p>Event ID: <strong>{eventId}</strong></p>
 
-      <h2 style={{ marginTop: "2rem" }}>Participants ({locations.length})</h2>
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {locations.map(([lat, lon], i) => (
-          <li key={i} style={{ margin: "0.5rem 0" }}>
-            Participant {i + 1}: ({lat.toFixed(4)}, {lon.toFixed(4)})
+      <h2>Participants ({participants.length})</h2>
+      <ul style={{ listStyle:"none", padding:0 }}>
+        {participants.map((p,i) => (
+          <li key={i} style={{ margin:"0.5rem 0" }}>
+            {p.name} ({p.lat.toFixed(4)}, {p.lon.toFixed(4)})
           </li>
         ))}
       </ul>
 
-      <h2 style={{ marginTop: "2rem" }}>Current Midpoint</h2>
+      <h2>Current Midpoint</h2>
       <p>
-        ({midpoint.lat.toFixed(4)}, {midpoint.lon.toFixed(4)})
+        {midpoint.lat != null
+          ? `(${midpoint.lat.toFixed(4)}, ${midpoint.lon.toFixed(4)})`
+          : "Waiting on locations…"}
       </p>
 
-      <h2 style={{ marginTop: "2rem" }}>Suggestions</h2>
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {suggestions.map((place, i) => (
-          <li key={i} style={{ margin: "0.5rem 0" }}>
-            {place.name} — ({place.lat.toFixed(4)}, {place.lon.toFixed(4)})
+      <h2>Suggestions</h2>
+      <ul style={{ listStyle:"none", padding:0 }}>
+        {suggestions.map((s,i) => (
+          <li key={i} style={{ margin:"0.5rem 0" }}>
+            {s.name} ({s.lat.toFixed(4)}, {s.lon.toFixed(4)})
           </li>
         ))}
       </ul>
 
-      <div style={{ marginTop: "2.5rem" }}>
-        <button
-          onClick={handleFinalize}
-          disabled={locations.length === 0}
-          style={{
-            padding: "0.75rem 1.5rem",
-            fontSize: "1rem",
-            cursor: locations.length === 0 ? "not-allowed" : "pointer"
-          }}
-        >
-          Finalize Group
-        </button>
-      </div>
+      <button
+        onClick={handleFinalize}
+        disabled={participants.length === 0}
+        style={{
+          marginTop: "2rem",
+          padding: "0.75rem 1.5rem",
+          fontSize: "1rem",
+          cursor: participants.length === 0 ? "not-allowed" : "pointer"
+        }}
+      >
+        Finalize Group
+      </button>
     </div>
   )
 }
