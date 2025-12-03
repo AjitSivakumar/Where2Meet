@@ -7,7 +7,8 @@ from .services.ai import AIService
 logger = logging.getLogger(__name__)
 api = Blueprint('api', __name__)
 ai_service = AIService()
-
+#choose number of returned venues (make it configurable later)
+retCount = 10
 EVENTS = {}
 
 @api.post('/events')
@@ -58,22 +59,18 @@ def finalize(event_id):
     else:
         center = midpoint(pts)
     
-    # Get real venues from OSM
-    # Allow optional radius override via query param (meters)
     try:
         radius = int(request.args.get('radius') or 1500)
     except Exception:
         radius = 1500
     venues = get_venues_from_osm(center, radius_m=radius, limit=30)
-    # Optional travel-time re-ranking using OSRM if available
     mode = (request.args.get('mode') or 'driving').lower()
     venues_time_ranked = rerank_by_travel_time(pts, venues, profile=mode)
     
-    # Rank venues using AI
     ranked = ai_service.rank_venues(event['title'], venues_time_ranked)
     
     return jsonify({
         'event': EVENTS[event_id],
         'center': center,
-        'venues': ranked[:10]  # Return top 10
+        'venues': ranked[:retCount]
     })
