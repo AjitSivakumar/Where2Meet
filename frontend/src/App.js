@@ -144,7 +144,7 @@ export default function App() {
       {view === 'landing' && (
         <div className="container">
           <div className="card">
-            <h2>Create New Event (description of the place)</h2>
+            <h2>Create New Event (enter a title with the description of the place)</h2>
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Event title" className="input" />
             <button onClick={createEvent} disabled={loading} className="btn btn-primary">
               {loading ? 'Creating...' : 'Create Event'}
@@ -167,7 +167,7 @@ export default function App() {
             <h2>{view === 'create' ? 'Share Event ID' : 'Add Your Location'}</h2>
             {view === 'create' && (
               <div className="event-id">
-                Event ID: <code className="code-block">{event.id}</code>
+                <strong>Event ID:</strong> <code className="code-block">{event.id}</code>
                 <button onClick={() => navigator.clipboard.writeText(event.id)} className="btn-small">Copy</button>
               </div>
             )}
